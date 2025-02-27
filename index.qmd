@@ -1,0 +1,1162 @@
+---
+title: "journal tf-idf"
+format: 
+  html:
+    page-layout: full
+toc: true
+execute:
+  echo: false
+  message: false
+  warning: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#| eval: false
+
+# setwd("/home/agricolamz/work/databases/linguistic_journals_ru/morphological_annotation/journal_tf_idf")
+
+library(tidyverse)
+library(tidytext)
+
+read_csv("../../linguistic_journals_ru/russian_journals.csv") |> 
+  left_join(read_csv("../abstracts_udpiped.csv")) |> 
+  filter(is.na(remove),
+         !is.na(abstract)) |> 
+  filter(!(tag %in% c("textology",
+                      "anthropology",
+                      "education",
+                      "not lingv",
+                      "not linguistics",
+                      "linguistic anthropology",
+                      "about person/event",
+                      "ethnography",
+                      "archeology",
+                      "history",
+                      "philology", 
+                      "about event",
+                      "about person",
+                      "about linguistics",
+                      "translation studies",
+                      "literary studies",
+                      "other"))) |> 
+  distinct()->
+  merged
+
+map(stopwords::stopwords_getsources()[-c(3, 4, 6, 8)], function(i){
+  print(i)
+  stopwords::stopwords(language = "ru", source = i)}) |> 
+  unlist() |>  
+  unique() |> 
+  sort() ->
+  stopwords_ru
+
+stopwords_ru <- c(stopwords_ru, "статья", "исследование", "автор")
+
+merged |> 
+  select(journal_title, lemmatized) |> 
+  unnest_tokens(output = "word", lemmatized) |> 
+  count(journal_title, word, sort = TRUE) |> 
+  filter(str_detect(word, "\\d", negate = TRUE)) |> 
+  anti_join(tibble(word = stopwords_ru, by = "word")) |> 
+  write_csv("unigram.csv")
+
+merged |> 
+  select(journal_title, lemmatized) |> 
+  unnest_tokens(output = "ngram", lemmatized, token = "ngrams", n = 2) |> 
+  filter(str_detect(ngram, "\\d", negate = TRUE)) |> 
+  separate(ngram, into = c("first", "second"), sep = " ") |> 
+  anti_join(tibble(first = stopwords_ru, by = "first")) |>
+  anti_join(tibble(second = stopwords_ru, by = "second")) |>
+  mutate(ngram = str_c(first, " ", second)) |> 
+  count(journal_title, ngram, sort = TRUE) |> 
+  write_csv("bigram.csv")
+```
+
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+library(tidytext)
+
+unigrams <- read_csv("unigram.csv", show_col_types = FALSE) 
+bigrams <- read_csv("bigram.csv", show_col_types = FALSE) 
+
+unigrams |> 
+  distinct(journal_title) |> 
+  pull(journal_title) ->
+  journals
+```
+
+
+
+## `r journals[1]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[1], journals[1], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[1]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[1], journals[1], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[1]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[2]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[2], journals[2], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[2]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[2], journals[2], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[2]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[3]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[3], journals[3], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[3]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[3], journals[3], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[3]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[4]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[4], journals[4], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[4]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[4], journals[4], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[4]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[5]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[5], journals[5], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[5]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[5], journals[5], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[5]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[6]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[6], journals[6], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[6]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[6], journals[6], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[6]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[7]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[7], journals[7], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[7]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[7], journals[7], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[7]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[8]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[8], journals[8], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[8]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[8], journals[8], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[8]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[9]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[9], journals[9], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[9]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[9], journals[9], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[9]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[10]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[10], journals[10], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[10]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[10], journals[10], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[10]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[11]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[11], journals[11], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[11]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[11], journals[11], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[11]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[12]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[12], journals[12], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[12]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[12], journals[12], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[12]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[13]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[13], journals[13], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[13]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[13], journals[13], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[13]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[14]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[14], journals[14], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[14]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[14], journals[14], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[14]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[15]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[15], journals[15], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[15]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[15], journals[15], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[15]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[16]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[16], journals[16], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[16]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[16], journals[16], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[16]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[17]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[17], journals[17], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[17]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[17], journals[17], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[17]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[18]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[18], journals[18], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[18]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[18], journals[18], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[18]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[19]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[19], journals[19], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[19]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[19], journals[19], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[19]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[20]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[20], journals[20], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[20]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[20], journals[20], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[20]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
+
+## `r journals[21]`
+
+::: {.panel-tabset}
+
+### Unigram
+
+```{r}
+unigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[21], journals[21], 'other')) |> 
+  bind_tf_idf(word, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[21]) |> 
+  select(word, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+
+```
+
+### Bigram
+
+```{r}
+bigrams |> 
+  mutate(journal_title = if_else(journal_title == journals[21], journals[21], 'other')) |> 
+  bind_tf_idf(ngram, journal_title, n) |> 
+  arrange(desc(tf_idf)) |> 
+  filter(journal_title == journals[21]) |> 
+  select(ngram, n) |> 
+  DT::datatable(class = 'cell-border stripe', 
+    rownames = FALSE, 
+    filter = 'top', 
+    extensions = 'Buttons',
+    options = list(pageLength = 50, 
+                   autoWidth = TRUE, 
+                   info = FALSE,
+                   dom = 'fBtp',
+                   buttons = list(list(extend = 'collection',
+                                       buttons = c('csv'))),
+                   paginate = TRUE))
+```
+
+:::
